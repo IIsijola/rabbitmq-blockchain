@@ -4,6 +4,7 @@ from node import Node
 import aio_pika
 import asyncio
 import colored
+import sys
 
 
 class Tester(object):
@@ -16,7 +17,12 @@ class Tester(object):
         self.channel = None
         self.loop = loop
 
-        self.blockchain_task = self.loop.create_task(self.blockchain.run())
+        try:
+            self.blockchain_task = self.loop.create_task(self.blockchain.run())
+            print(F"{colored.attr('bold')}{colored.fg(2)}[+] Successfully instantiated blockchain...{colored.attr('reset')}")
+        except:
+            print(F"{colored.attr('bold')}{colored.fg(2)}[+] Failed to instantiate blockchain...{colored.attr('reset')}")
+            sys.exit()
 
         self.consumers = [
             'transactions',
