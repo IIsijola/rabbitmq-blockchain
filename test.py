@@ -15,7 +15,8 @@ class Tester(object):
         self.connection = None
         self.exchange = None
         self.channel = None
-        self.loop = loop
+        # self.loop = loop
+        self.loop = asyncio.get_event_loop()
 
         try:
             self.blockchain_task = self.loop.create_task(self.blockchain.run())
@@ -71,6 +72,9 @@ class Tester(object):
         await logs_exchange.publish(message, routing_key="info")
         print(F'[+] publishing message:{data} to exchange {exchange}')
 
+    async def __register_client(self):
+        pass
+
     async def __listen_exchange(self, channel: aio_pika.Channel, exchange_name: str):
         exchange = await channel.declare_exchange(exchange_name, aio_pika.ExchangeType.FANOUT)
         queue = await channel.declare_queue(exclusive=True)
@@ -107,8 +111,8 @@ class Tester(object):
         #  - test for success sending of recording of data
         pass
 
-    def __del__(self):
-        if self.connection: self.connection.close()
+    async def cleanup(self):
+        await self.connection.close()
 
 
 if __name__ == '__main__':
@@ -121,5 +125,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         print(F"{colored.attr('bold')}{colored.fg(1)}[!] Received keyboard interrupt{colored.attr('reset')}")
         print(F"{colored.attr('bold')}{colored.fg(2)}[+] Cleaning up{colored.attr('reset')}")
-        del test
+        loop.create_task(test.cleanup())
 
