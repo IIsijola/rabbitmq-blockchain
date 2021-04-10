@@ -32,13 +32,20 @@ class Blockchain:
 
     def in_the_beginning(self) -> None:
         data = "In the beginning God created the heavens and the earth."
-        previous_hash = '0'*64
+        previous_hash = '7'*64
         genesis_block = block.Block(data=data, previous_block_hash=previous_hash)
         self.blocks.append(genesis_block)
+        # print("Appended genesis block")
+        # print("genesis block hash is ",self.blocks[-1].hash)
+        # print("previous hash ", previous_hash)
+        # print("blocks", self.blocks[-1].hash)
 
     def get_last_hash(self) -> str:
         hash = self.hashes[-1] if self.hashes else self.blocks[-1].hash
+        if not hash:
+            hash = self.blocks[-1].previous_block_hash
         print("last hash is", hash)
+        print("last hash is", self.blocks[-1].hash)
         return hash
 
     def get_blocks(self) -> list[object]:
@@ -149,6 +156,7 @@ class Blockchain:
         await self.__listen_exchange(channel, "blocks")
 
     async def run(self):
+        # print("Blockchain is running")
         if not self.join:
             self.in_the_beginning()
             asyncio.ensure_future(self.blocks[-1].calculate_valid_hash())

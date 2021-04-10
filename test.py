@@ -11,12 +11,16 @@ class Tester(object):
 
     def __init__(self, loop):
         self.blockchain = Blockchain(join=False)
-        self.number_of_nodes = 2
+        self.number_of_nodes = 1
         self.connection = None
         self.exchange = None
         self.channel = None
         # self.loop = loop
         self.loop = asyncio.get_event_loop()
+        self.client = "FakeClient"
+        self.client_prescriptions = [ "panadol", "viagra", "fentanyl" ]
+        self.node_tasks = []
+        self.nodes = []
 
         try:
             self.blockchain_task = self.loop.create_task(self.blockchain.run())
@@ -27,8 +31,8 @@ class Tester(object):
 
         self.consumers = [
             'transactions',
-            'history',
-            'block'
+            # 'history',
+            # 'block'
         ]
 
         self.transaction_operations = [
@@ -42,10 +46,6 @@ class Tester(object):
             'add_block'
         ]
 
-        # instantiate nodes that we use to test the network
-        print("Instantiating the nodes for the blockchain")
-        self.nodes = [ Node() for i in range(self.number_of_nodes) ]
-        self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
 
     def reset_network(self):
         print(F"{colored.attr('bold')}{colored.fg(4)}[+] Resetting network...{colored.attr('reset')}")
@@ -60,27 +60,35 @@ class Tester(object):
         print(F"{colored.attr('bold')}{colored.fg(4)}[+] Instantiated {self.number_of_nodes} nodes for testing{colored.attr('reset')}")
         self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
 
-    async def make_transaction(self, exchange, data):
+    async def __publish_network(self, exchange, data):
         logs_exchange = await self.channel.declare_exchange(
             exchange, aio_pika.ExchangeType.FANOUT
         )
-        message_body = b''.join(data.encode())
+        message_body = b''.join(x.encode() for x in data)
         message = aio_pika.Message(
             message_body, delivery_mode=aio_pika.DeliveryMode.PERSISTENT
         )
-
         await logs_exchange.publish(message, routing_key="info")
-        print(F'[+] publishing message:{data} to exchange {exchange}')
+        print(F"{colored.attr('bold')}{colored.fg(4)}[+] publishing message:{data} to exchange {exchange}{colored.attr('reset')}")
 
-    async def __register_client(self):
-        pass
+    async def __register_client_and_prescriptions(self):
+        print(F"{colored.attr('bold')}{colored.fg(4)}adding prescriptions to blockchain{colored.attr('reset')}")
+        await self.__publish_network("transactions", F"add_owner {self.client}")
+        for prescription in self.client_prescriptions:
+            await self.__publish_network("transactions", F"register {self.client} {prescription}")
+        # await self.__publish_network("transactions", )
 
-    async def __listen_exchange(self, channel: aio_pika.Channel, exchange_name: str):
+    async def __listen_exchange(self, channel: aio_pika.Channel, exchange_name: str = "transactions"):
         exchange = await channel.declare_exchange(exchange_name, aio_pika.ExchangeType.FANOUT)
         queue = await channel.declare_queue(exclusive=True)
         if exchange_name in self.consumers:
             await queue.bind(exchange)
-            await queue.consume(self.consumers[exchange_name])
+            await queue.consume(self.__on_transactions)
+
+    async def __on_transactions(self, message: aio_pika.IncomingMessage):
+        async with message.process():
+            print("received the following")
+            print(message.body.decode())
 
     async def __consumer(self, message: aio_pika.IncomingMessage):
         pass
@@ -92,11 +100,34 @@ class Tester(object):
             self.channel = await self.connection.channel()
         except aio_pika.AMQPException as e:
             print(F"{colored.attr('bold')}{colored.fg(1)}[!] Failed to connect to RabbitMQ{colored.attr('reset')}")
+            sys.exit()
 
     async def run(self):
         await self.connect()
-        await asyncio.sleep(10)
-        self.reset_network()
+        # await asyncio.sleep(100)
+
+        while not self.blockchain.blocks[-1].hash:
+            # print(self.blockchain.blocks[-1].hash)
+            await asyncio.sleep(10)
+
+        print("Exited the while loop")
+        # instantiate nodes that we use to test the network
+        print(F"{colored.attr('bold')}{colored.fg(4)}[+] Instantiating nodes of blockchain{colored.attr('reset')}")
+        self.nodes = [ Node() for i in range(self.number_of_nodes) ]
+        self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
+
+        # while not all([node.hashes for node in self.nodes]):
+        #     print(self.nodes[-1].hashes)
+        #     print([node.hashes for node in self.nodes])
+        #     print(all([node.hashes for node in self.nodes]))
+            # await asyncio.sleep(5)
+
+        await asyncio.sleep(100)
+        await self.__register_client_and_prescriptions()
+        await self.__listen_exchange(self.channel)
+
+        await asyncio.sleep(20)
+        await self.__publish_network("transactions", F"fetch {self.client}")
 
         # register consumers
         # make transactions
