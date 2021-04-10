@@ -1,10 +1,7 @@
-from async_class import AsyncClass
-# from block import block
 import block
 import aio_pika
 import asyncio
 import json
-import pickle # this is dangerous and is only being done for this demo
 import time
 import sys
 
@@ -52,9 +49,6 @@ class Blockchain:
 
     async def __on_transactions(self, message: aio_pika.IncomingMessage):
         async with message.process():
-            # print(F"transactions {message.body}")
-            # print(message)
-
             print(message.body.decode())
             if self.transaction_operations.get(message.body.decode().split()[0], False):
                 await self.transaction_operations[message.body.decode().split()[0]](message.body.decode())
@@ -117,7 +111,6 @@ class Blockchain:
         await connection.close()
 
     async def __publish_last_hash(self, message: str):
-        # await self.__publish_history()
         if len(message.split()) != 1:
             return
         print('publishing last hash')
