@@ -4,22 +4,44 @@ from block.node import Node
 from aio_pika import connect, Message, DeliveryMode, ExchangeType, AMQPException
 import asyncio
 
+
 class Tester(object):
-    number_of_nodes = 2
-    exchange = None
-    connection = None
-    channel = None
-    loop = None
 
     def __init__(self, loop):
-        self.blockchain = Blockchain()
-        self.nodes = []
+        self.blockchain = Blockchain(join=False)
+        self.number_of_nodes = 2
+        self.connection = None
+        self.exchange = None
+        self.channel = None
         self.loop = loop
 
-        for i in range(self.number_of_nodes):
-            self.nodes.append(Node())
+        # instantiate nodes that we use to test the network
+        self.nodes = [ Node() for i in range(self.number_of_nodes) ]
 
-    def make_transaction(self, exchange, data):
+        self.consumers = [
+            'transactions',
+            'history',
+            'block'
+        ]
+        self.transaction_operations = [
+            'register',
+            'history',
+            'fetch'
+        ]
+
+        self.block_operations = [
+            'last_block',
+            'add_block'
+        ]
+
+    def reset_network(self):
+        print("[+] Resetting network ...")
+        self.blockchain = Blockchain(join=False)
+        print("[+] Instantiated new instance of blockchain")
+        self.nodes = [ Node() for i in range(self.number_of_nodes) ]
+        print(F"[+] Instantiated {self.number_of_nodes} nodes for testing")
+
+    async def make_transaction(self, exchange, data):
         logs_exchange = await self.channel.declare_exchange(
             exchange, ExchangeType.FANOUT
         )
@@ -32,7 +54,7 @@ class Tester(object):
         await logs_exchange.publish(message, routing_key="info")
         print(F'[+] publishing message:{data} to exchange {exchange}')
 
-    def connect(self):
+    async def connect(self):
         print(F'[+] Successfully connected to RabbitMQ')
         try:
             self.connection = await connect(
