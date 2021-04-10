@@ -3,6 +3,7 @@ from node import Node
 
 import aio_pika
 import asyncio
+import colored
 
 
 class Tester(object):
@@ -15,7 +16,7 @@ class Tester(object):
         self.channel = None
         self.loop = loop
 
-        self.loop.create_task(self.blockchain.run())
+        self.blockchain_task = self.loop.create_task(self.blockchain.run())
 
         self.consumers = [
             'transactions',
@@ -37,15 +38,20 @@ class Tester(object):
         # instantiate nodes that we use to test the network
         print("Instantiating the nodes for the blockchain")
         self.nodes = [ Node() for i in range(self.number_of_nodes) ]
-        [ self.loop.create_task(node.run()) for node in self.nodes ]
+        self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
 
     def reset_network(self):
-        print("[+] Resetting network ...")
+        print(F"{colored.attr('bold')}{colored.fg(4)}[+] Resetting network...{colored.attr('reset')}")
+        print(F"{colored.attr('bold')}{colored.fg(1)}[!] Cancelling old blockchain{colored.attr('reset')}")
+        self.blockchain_task.cancel()
+        print(F"{colored.attr('bold')}{colored.fg(1)}[!] Cancelling old nodes{colored.attr('reset')}")
+        for task in self.node_tasks: task.cancel()
         self.blockchain = Blockchain(join=False)
-        print("[+] Instantiated new instance of blockchain")
+        self.blockchain_task = self.loop.create_task(self.blockchain.run())
+        print(F"{colored.attr('bold')}{colored.fg(4)}[+] Instantiated new instance of blockchain{colored.attr('reset')}")
         self.nodes = [ Node() for i in range(self.number_of_nodes) ]
-        print(F"[+] Instantiated {self.number_of_nodes} nodes for testing")
-        [ self.loop.create_task(node.run()) for node in self.nodes ]
+        print(F"{colored.attr('bold')}{colored.fg(4)}[+] Instantiated {self.number_of_nodes} nodes for testing{colored.attr('reset')}")
+        self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
 
     async def make_transaction(self, exchange, data):
         logs_exchange = await self.channel.declare_exchange(
@@ -70,15 +76,17 @@ class Tester(object):
         pass
 
     async def connect(self):
-        print(F'[+] Successfully connected to RabbitMQ')
+        print(F"{colored.attr('bold')}{colored.fg(2)}[+] Successfully connected to RabbitMQ{colored.attr('reset')}")
         try:
             self.connection = await aio_pika.connect("amqp://guest:guest@localhost/", loop=self.loop)
             self.channel = await self.connection.channel()
         except aio_pika.AMQPException as e:
-            print("[-] Failed to connect to RabbitMQ")
+            print(F"{colored.attr('bold')}{colored.fg(1)}[!] Failed to connect to RabbitMQ{colored.attr('reset')}")
 
     async def run(self):
         await self.connect()
+        await asyncio.sleep(10)
+        self.reset_network()
 
         # register consumers
         # make transactions
@@ -101,10 +109,11 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
     test = Tester(loop)
     loop.create_task(test.run())
-    print("Tests are running")
+    print(F"{colored.attr('bold')}{colored.fg(4)}[?] Tests are running{colored.attr('reset')}")
     try:
         loop.run_forever()
     except KeyboardInterrupt:
-        print("[+] Cleaning up")
+        print(F"{colored.attr('bold')}{colored.fg(1)}[!] Received keyboard interrupt{colored.attr('reset')}")
+        print(F"{colored.attr('bold')}{colored.fg(2)}[+] Cleaning up{colored.attr('reset')}")
         del test
 
