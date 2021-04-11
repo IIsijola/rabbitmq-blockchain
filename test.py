@@ -79,12 +79,11 @@ class Tester(object):
             print("received the following")
             # print(message.body.decode())
             data = ''.join(message.body.decode().split()[1:])
-            # print(data)
+            # print("data is ", data)
             try:
                 data = json.loads(str(data))
             except json.decoder.JSONDecodeError:
-                pass
-            print(data)
+                return
             if data == self.client_prescriptions:
                 print(F"{colored.attr('bold')}{colored.fg(2)}[+] Successfully received prescription{colored.attr('reset')}")
                 sys.exit(1)
