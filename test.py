@@ -10,7 +10,7 @@ import sys
 
 class Tester(object):
 
-    def __init__(self, loop):
+    def __init__(self):
         self.blockchain = Blockchain(join=False)
         self.number_of_nodes = 1
         self.connection = None
@@ -149,7 +149,7 @@ class Tester(object):
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    test = Tester(loop)
+    test = Tester()
     loop.create_task(test.run())
     print(F"{colored.attr('bold')}{colored.fg(4)}[?] Tests are running{colored.attr('reset')}")
     try:
