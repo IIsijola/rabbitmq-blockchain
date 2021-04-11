@@ -4,6 +4,7 @@ from node import Node
 import aio_pika
 import asyncio
 import colored
+import json
 import sys
 
 
@@ -89,6 +90,14 @@ class Tester(object):
         async with message.process():
             print("received the following")
             print(message.body.decode())
+            data = ''.join(message.body.decode().split()[1:])
+            data = json.loads(str(data))
+            if data == self.client_prescriptions:
+                print(F"{colored.attr('bold')}{colored.fg(2)}[+] Successfully received prescription{colored.attr('reset')}")
+                sys.exit(1)
+            else:
+                print(F"{colored.attr('bold')}{colored.fg(1)}[!] Failed to received prescriptions{colored.attr('reset')}")
+                sys.exit(-1)
 
     async def __consumer(self, message: aio_pika.IncomingMessage):
         pass
@@ -110,23 +119,23 @@ class Tester(object):
             # print(self.blockchain.blocks[-1].hash)
             await asyncio.sleep(10)
 
-        print("Exited the while loop")
+        # print("Exited the while loop")
         # instantiate nodes that we use to test the network
         print(F"{colored.attr('bold')}{colored.fg(4)}[+] Instantiating nodes of blockchain{colored.attr('reset')}")
         self.nodes = [ Node() for i in range(self.number_of_nodes) ]
         self.node_tasks = [ self.loop.create_task(node.run()) for node in self.nodes ]
 
-        # while not all([node.hashes for node in self.nodes]):
-        #     print(self.nodes[-1].hashes)
-        #     print([node.hashes for node in self.nodes])
-        #     print(all([node.hashes for node in self.nodes]))
-            # await asyncio.sleep(5)
+        # while not all([node.hashes[-1] for node in self.nodes]):
+        #     # print(self.nodes[-1].hashes)
+        #     print([node.hashes[-1] for node in self.nodes])
+        #     print(all([node.hashes[-1] for node in self.nodes]))
+        #     await asyncio.sleep(5)
 
-        await asyncio.sleep(100)
+        await asyncio.sleep(10)
         await self.__register_client_and_prescriptions()
         await self.__listen_exchange(self.channel)
 
-        await asyncio.sleep(20)
+        await asyncio.sleep(10)
         await self.__publish_network("transactions", F"fetch {self.client}")
 
         # register consumers
