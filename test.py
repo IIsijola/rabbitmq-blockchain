@@ -36,18 +36,6 @@ class Tester(object):
             # 'block'
         ]
 
-        self.transaction_operations = [
-            'register',
-            'history',
-            'fetch'
-        ]
-
-        self.block_operations = [
-            'last_block',
-            'add_block'
-        ]
-
-
     def reset_network(self):
         print(F"{colored.attr('bold')}{colored.fg(4)}[+] Resetting network...{colored.attr('reset')}")
         print(F"{colored.attr('bold')}{colored.fg(1)}[!] Cancelling old blockchain{colored.attr('reset')}")
@@ -89,9 +77,14 @@ class Tester(object):
     async def __on_transactions(self, message: aio_pika.IncomingMessage):
         async with message.process():
             print("received the following")
-            print(message.body.decode())
+            # print(message.body.decode())
             data = ''.join(message.body.decode().split()[1:])
-            data = json.loads(str(data))
+            # print(data)
+            try:
+                data = json.loads(str(data))
+            except json.decoder.JSONDecodeError:
+                pass
+            print(data)
             if data == self.client_prescriptions:
                 print(F"{colored.attr('bold')}{colored.fg(2)}[+] Successfully received prescription{colored.attr('reset')}")
                 sys.exit(1)
