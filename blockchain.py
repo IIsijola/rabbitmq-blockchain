@@ -1,10 +1,7 @@
-from async_class import AsyncClass
-# from block import block
 import block
 import aio_pika
 import asyncio
 import json
-import pickle # this is dangerous and is only being done for this demo
 import time
 import sys
 
@@ -35,13 +32,20 @@ class Blockchain:
 
     def in_the_beginning(self) -> None:
         data = "In the beginning God created the heavens and the earth."
-        previous_hash = '0'*64
+        previous_hash = '7'*64
         genesis_block = block.Block(data=data, previous_block_hash=previous_hash)
         self.blocks.append(genesis_block)
+        # print("Appended genesis block")
+        # print("genesis block hash is ",self.blocks[-1].hash)
+        # print("previous hash ", previous_hash)
+        # print("blocks", self.blocks[-1].hash)
 
     def get_last_hash(self) -> str:
         hash = self.hashes[-1] if self.hashes else self.blocks[-1].hash
+        if not hash:
+            hash = self.blocks[-1].previous_block_hash
         print("last hash is", hash)
+        print("last hash is", self.blocks[-1].hash)
         return hash
 
     def get_blocks(self) -> list[object]:
@@ -52,9 +56,6 @@ class Blockchain:
 
     async def __on_transactions(self, message: aio_pika.IncomingMessage):
         async with message.process():
-            # print(F"transactions {message.body}")
-            # print(message)
-
             print(message.body.decode())
             if self.transaction_operations.get(message.body.decode().split()[0], False):
                 await self.transaction_operations[message.body.decode().split()[0]](message.body.decode())
@@ -117,7 +118,6 @@ class Blockchain:
         await connection.close()
 
     async def __publish_last_hash(self, message: str):
-        # await self.__publish_history()
         if len(message.split()) != 1:
             return
         print('publishing last hash')
@@ -156,6 +156,7 @@ class Blockchain:
         await self.__listen_exchange(channel, "blocks")
 
     async def run(self):
+        # print("Blockchain is running")
         if not self.join:
             self.in_the_beginning()
             asyncio.ensure_future(self.blocks[-1].calculate_valid_hash())

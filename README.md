@@ -89,3 +89,7 @@ they have; We can also dump the entire blockchain history.
 
 We recommend using the abovementioned rabbitmq management console to watch the network
 and see all transactions that are taking place
+
+
+to test the code run
+```python3.9 test.py```

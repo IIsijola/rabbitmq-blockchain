@@ -61,9 +61,10 @@ class Node:
             await connection.close()
 
     async def __on_add_owner(self, owner):
+        print("owner data is equal too", owner)
         if not self.transactions.get(owner, False):
-            self.transactions[owner.split()[0]] = []
-        print(F"added owner {owner.split()[0]}")
+            self.transactions[owner.split()[1]] = []
+        print(F"added owner {owner.split()[1]}")
 
     async def __register_transaction(self, data):
         owner, message = data.split()[1:]
@@ -76,7 +77,7 @@ class Node:
         print(F"registered transaction for {owner}")
 
     async def get_last_hash(self):
-        # print("Getting hash")
+        print("Getting hash")
         connection = await self.__publish('blocks', 'last_hash')
         await connection.close()
 
@@ -164,8 +165,9 @@ class Node:
         await self.__listen_exchange(channel, "blocks")
 
     async def run(self):
-        await self.get_last_hash()
         await self.__subscriber()
+        await self.get_last_hash()
+        print("waiting for last hash")
 
 
 if __name__ == "__main__":
